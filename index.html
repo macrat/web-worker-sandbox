@@ -1,0 +1,64 @@
+<script src="https://unpkg.com/vue"></script>
+
+<style>
+main {
+    display: flex;
+}
+main > div {
+    flex: 1 1 0;
+}
+.log {
+    border: 1px solid gray;
+    padding: .2em;
+}
+</style>
+
+<main>
+    <div v-for="t in threads">
+        <button @click="start(t)" :disabled="t.worker !== null">START</button>
+        <button @click="stop(t)" :disabled="t.worker === null">STOP</button>
+        <button @click="clear(t)" :disabled="t.log.length === 0">CLEAR</button>
+        <div class=log>
+            <div v-for="line in t.log">{{ line }}</div>
+        </div>
+    </div>
+</main>
+
+<script>
+new Vue({
+    el: 'main',
+    data: {
+        threads: [
+            {log: [], worker: null},
+            {log: [], worker: null},
+            {log: [], worker: null},
+        ],
+    },
+    methods: {
+        start(thread) {
+            thread.worker = new Worker('worker.js');
+
+            thread.worker.addEventListener('message', ({data: {type, value}}) => {
+                switch (type) {
+                case 'prime':
+                    thread.log.unshift(value);
+                    if (thread.log.length > 20) {
+                        thread.log.pop();
+                    }
+                    break;
+                case 'bye':
+                    thread.worker = null;
+                    break;
+                }
+            });
+        },
+        stop(thread) {
+            thread.worker.terminate();
+            thread.worker = null;
+        },
+        clear(thread) {
+            thread.log = [];
+        },
+    },
+});
+</script>
